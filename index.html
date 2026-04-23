@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lyft Deep Link Test — Miami</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #0a0a0a;
+    color: #fff;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  .container { max-width: 480px; margin: 0 auto; }
+  h1 { color: #FF00BF; font-size: 32px; margin-bottom: 8px; }
+  h2 { font-size: 16px; color: #aaa; margin-bottom: 32px; font-weight: 400; }
+  .card {
+    background: #1a1a1a;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    border: 1px solid #333;
+  }
+  .card h3 { font-size: 14px; color: #FF00BF; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+  .row span:first-child { color: #888; }
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 18px;
+    background: #FF00BF;
+    color: #000;
+    border: none;
+    border-radius: 999px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .btn.secondary { background: #333; color: #fff; }
+  .btn:active { transform: scale(0.98); }
+  .url-box {
+    background: #000;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 12px;
+    font-family: monospace;
+    font-size: 11px;
+    word-break: break-all;
+    color: #0f0;
+    margin-top: 8px;
+  }
+  .platform {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: #FF00BF;
+    color: #000;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+  .note {
+    background: #2a1a00;
+    border-left: 3px solid #ffa500;
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #ffcc80;
+    margin-top: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Lyft Deep Link</h1>
+  <h2>Prueba Miami: MIA → South Beach</h2>
+
+  <div class="platform" id="platform">Detectando...</div>
+
+  <div class="card">
+    <h3>Origen</h3>
+    <div class="row"><span>Lugar</span><span>Miami Int'l Airport</span></div>
+    <div class="row"><span>Latitud</span><span>25.7932</span></div>
+    <div class="row"><span>Longitud</span><span>-80.2906</span></div>
+  </div>
+
+  <div class="card">
+    <h3>Destino</h3>
+    <div class="row"><span>Lugar</span><span>South Beach</span></div>
+    <div class="row"><span>Latitud</span><span>25.7826</span></div>
+    <div class="row"><span>Longitud</span><span>-80.1340</span></div>
+  </div>
+
+  <button class="btn" onclick="openLyft()">Abrir en Lyft</button>
+  <a class="btn secondary" id="rawLink" href="#">Probar link directo (tap)</a>
+
+  <div class="card">
+    <h3>Deep link generado</h3>
+    <div class="url-box" id="urlPreview"></div>
+  </div>
+
+  <div class="note">
+    <strong>iOS:</strong> si la app no abre al primer tap, mantené presionado el botón "Probar link directo" y elegí "Abrir en Lyft". iOS recuerda la preferencia entre Safari y app.
+  </div>
+</div>
+
+<script>
+  const PICKUP_LAT = 25.7932;
+  const PICKUP_LNG = -80.2906;
+  const DEST_LAT = 25.7826;
+  const DEST_LNG = -80.1340;
+
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+  const isAndroid = /Android/.test(ua);
+
+  // Deep link para la app (funciona en iOS y Android vía click)
+  const appLink = `lyft://ridetype?id=lyft&pickup[latitude]=${PICKUP_LAT}&pickup[longitude]=${PICKUP_LNG}&destination[latitude]=${DEST_LAT}&destination[longitude]=${DEST_LNG}`;
+
+  // Fallback a stores
+  const iosStore = "https://apps.apple.com/us/app/lyft/id529379082";
+  const androidStore = "https://play.google.com/store/apps/details?id=me.lyft.android";
+
+  // Plataforma
+  const platformEl = document.getElementById('platform');
+  if (isIOS) platformEl.textContent = 'iOS detectado';
+  else if (isAndroid) platformEl.textContent = 'Android detectado';
+  else platformEl.textContent = 'Desktop detectado';
+
+  // Preview
+  document.getElementById('urlPreview').textContent = appLink;
+  document.getElementById('rawLink').href = appLink;
+
+  function openLyft() {
+    const start = Date.now();
+    const store = isIOS ? iosStore : androidStore;
+
+    // Si la app no abre en 2.5s, redirige al store
+    const fallback = setTimeout(() => {
+      // Solo redirige si la pestaña sigue activa (app NO se abrió)
+      if (Date.now() - start < 3000 && document.visibilityState === 'visible') {
+        window.location.href = store;
+      }
+    }, 2500);
+
+    // Si la app se abre, la pestaña se oculta → cancelamos fallback
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') clearTimeout(fallback);
+    }, { once: true });
+
+    // Dispara el scheme
+    window.location.href = appLink;
+  }
+</script>
+</body>
+</html>
