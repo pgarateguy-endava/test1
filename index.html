@@ -119,43 +119,77 @@
   const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
   const isAndroid = /Android/.test(ua);
 
-  // Deep link para la app (funciona en iOS y Android vía click)
-  const appLink = `lyft://ridetype?id=lyft&pickup[latitude]=${PICKUP_LAT}&pickup[longitude]=${PICKUP_LNG}&destination[latitude]=${DEST_LAT}&destination[longitude]=${DEST_LNG}`;
+  const appLink =
+    `lyft://ridetype?id=lyft` +
+    `&pickup[latitude]=${PICKUP_LAT}` +
+    `&pickup[longitude]=${PICKUP_LNG}` +
+    `&destination[latitude]=${DEST_LAT}` +
+    `&destination[longitude]=${DEST_LNG}`;
 
-  // Fallback a stores
   const iosStore = "https://apps.apple.com/us/app/lyft/id529379082";
   const androidStore = "https://play.google.com/store/apps/details?id=me.lyft.android";
 
-  // Plataforma
   const platformEl = document.getElementById('platform');
-  if (isIOS) platformEl.textContent = 'iOS detectado';
-  else if (isAndroid) platformEl.textContent = 'Android detectado';
-  else platformEl.textContent = 'Desktop detectado';
 
-  // Preview
+  if (isIOS) {
+    platformEl.textContent = 'iOS detectado';
+  } else if (isAndroid) {
+    platformEl.textContent = 'Android detectado';
+  } else {
+    platformEl.textContent = 'Desktop detectado';
+  }
+
   document.getElementById('urlPreview').textContent = appLink;
-  document.getElementById('rawLink').href = appLink;
+
+  const rawLink = document.getElementById('rawLink');
+  rawLink.href = appLink;
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(appLink);
+      alert("Deep link copiado");
+    } catch (err) {
+      console.error(err);
+      alert("No se pudo copiar");
+    }
+  }
 
   function openLyft() {
     const start = Date.now();
-    const store = isIOS ? iosStore : androidStore;
 
-    // Si la app no abre en 2.5s, redirige al store
+    const store = isIOS
+      ? iosStore
+      : androidStore;
+
     const fallback = setTimeout(() => {
-      // Solo redirige si la pestaña sigue activa (app NO se abrió)
-      if (Date.now() - start < 3000 && document.visibilityState === 'visible') {
+      if (
+        Date.now() - start < 3000 &&
+        document.visibilityState === 'visible'
+      ) {
+        console.log("Fallback to store");
         window.location.href = store;
       }
     }, 2500);
 
-    // Si la app se abre, la pestaña se oculta → cancelamos fallback
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') clearTimeout(fallback);
-    }, { once: true });
+    document.addEventListener(
+      'visibilitychange',
+      () => {
+        if (document.visibilityState === 'hidden') {
+          clearTimeout(fallback);
+        }
+      },
+      { once: true }
+    );
 
-    // Dispara el scheme
+    console.log("Opening app link");
     window.location.href = appLink;
   }
+
+  console.log({
+    isIOS,
+    isAndroid,
+    appLink,
+  });
 </script>
 </body>
 </html>
